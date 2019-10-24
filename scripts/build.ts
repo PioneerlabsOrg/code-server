@@ -77,11 +77,10 @@ class Builder {
 		const vscodeVersion = this.ensureArgument("vscodeVersion", args[0]);
 		const codeServerVersion = this.ensureArgument("codeServerVersion", args[1]);
 
-		const stagingPath = path.join(this.outPath, "build");
-		const vscodeSourcePath = path.join(stagingPath, `vscode-${vscodeVersion}-source`);
+		const vscodeSourcePath = path.join(this.outPath, "source", `vscode-${vscodeVersion}-source`);
 		const binariesPath = path.join(this.outPath, "binaries");
 		const binaryName = `code-server${codeServerVersion}-vsc${vscodeVersion}-${target}-${arch}`;
-		const finalBuildPath = path.join(stagingPath, `${binaryName}-built`);
+		const finalBuildPath = path.join(this.outPath, "build", `${binaryName}-built`);
 
 		switch (task) {
 			case Task.Binary:
@@ -100,14 +99,14 @@ class Builder {
 	 */
 	private async target(): Promise<"darwin" | "alpine" | "linux"> {
 		if (!this._target) {
-			if (process.env.OSTYPE && /^darwin/.test(process.env.OSTYPE)) {
+			if (os.platform() === "darwin" || (process.env.OSTYPE && /^darwin/.test(process.env.OSTYPE))) {
 				this._target = "darwin";
 			} else {
 				// Alpine's ldd doesn't have a version flag but if you use an invalid flag
 				// (like --version) it outputs the version to stderr and exits with 1.
 				const result = await util.promisify(cp.exec)("ldd --version")
 					.catch((error) => ({ stderr: error.message, stdout: "" }));
-				if (/^musl/.test(result.stderr) || /^musl/.test(result.stdout)) {
+				if (/musl/.test(result.stderr) || /musl/.test(result.stdout)) {
 					this._target = "alpine";
 				} else {
 					this._target = "linux";
@@ -131,8 +130,8 @@ class Builder {
 
 	/**
 	 * Return true if it looks like we're inside VS Code. This is used to prevent
-	 * accidentally building inside while developing or to prevent trying to run
-	 * `yarn` in VS Code when we aren't in VS Code.
+	 * accidentally building inside VS Code while developing which causes issues
+	 * because the watcher will try compiling those built files.
 	 */
 	private isInVscode(pathToCheck: string): boolean {
 		let inside = false;
@@ -159,9 +158,8 @@ class Builder {
 		});
 
 		// Download and prepare VS Code if necessary (should be cached by CI).
-		const exists = fs.existsSync(vscodeSourcePath);
-		if (exists) {
-			this.log("Using existing VS Code directory");
+		if (fs.existsSync(vscodeSourcePath)) {
+			this.log("Using existing VS Code clone");
 		} else {
 			await this.task("Cloning VS Code", () => {
 				return util.promisify(cp.exec)(
@@ -169,11 +167,19 @@ class Builder {
 						+ ` --quiet --branch "${vscodeVersion}"`
 						+ ` --single-branch --depth=1 "${vscodeSourcePath}"`);
 			});
+		}
 
+		if (fs.existsSync(path.join(vscodeSourcePath, "node_modules"))) {
+			this.log("Using existing VS Code node_modules");
+		} else {
 			await this.task("Installing VS Code dependencies", () => {
 				return util.promisify(cp.exec)("yarn", { cwd: vscodeSourcePath });
 			});
+		}
 
+		if (fs.existsSync(path.join(vscodeSourcePath, ".build/extensions"))) {
+			this.log("Using existing built-in-extensions");
+		} else {
 			await this.task("Building default extensions", () => {
 				return util.promisify(cp.exec)(
 					"yarn gulp compile-extensions-build --max-old-space-size=32384",
@@ -262,7 +268,7 @@ class Builder {
 						fs.remove(path.join(finalServerPath, "node_modules")).then(() => {
 							return fs.copy(path.join(serverPath, "node_modules"), path.join(finalServerPath, "node_modules"));
 						}),
-						fs.copy(path.join(serverPath, "src/browser/workbench-build.html"), path.join(finalServerPath, "src/browser/workbench.html")),
+						fs.copy(path.join(finalServerPath, "src/browser/workbench-build.html"), path.join(finalServerPath, "src/browser/workbench.html")),
 					]);
 				}),
 			]);
@@ -297,8 +303,16 @@ class Builder {
 			]);
 		});
 
-		// This is so it doesn't get cached along with VS Code (no point).
-		await this.task("Removing copied server", () => fs.remove(serverPath));
+		// This is so it doesn't get cached along with VS Code. There's no point
+		// since there isn't anything like an incremental build.
+		await this.task("Removing build files for smaller cache", () => {
+			return Promise.all([
+				fs.remove(serverPath),
+				fs.remove(path.join(vscodeSourcePath, "out-vscode")),
+				fs.remove(path.join(vscodeSourcePath, "out-vscode-min")),
+				fs.remove(path.join(vscodeSourcePath, "out-build")),
+			]);
+		});
 
 		// Prepend code to the target which enables finding files within the binary.
 		const prependLoader = async (relativeFilePath: string): Promise<void> => {
@@ -327,19 +341,25 @@ class Builder {
 			]);
 		});
 
-		// TODO: fix onigasm dep
-		// # onigasm 2.2.2 has a bug that makes it broken for PHP files so use 2.2.1.
-		// # https://github.com/NeekSandhu/onigasm/issues/17
-		// function fix-onigasm() {
-		// 	local onigasmPath="${buildPath}/node_modules/onigasm-umd"
-		// 	rm -rf "${onigasmPath}"
-		// 	git clone "https://github.com/alexandrudima/onigasm-umd" "${onigasmPath}"
-		// 	cd "${onigasmPath}" && yarn && yarn add --dev onigasm@2.2.1 && yarn package
-		// 	mkdir "${onigasmPath}-temp"
-		// 	mv "${onigasmPath}/"{release,LICENSE} "${onigasmPath}-temp"
-		// 	rm -rf "${onigasmPath}"
-		// 	mv "${onigasmPath}-temp" "${onigasmPath}"
-		// }
+		// onigasm 2.2.2 has a bug that makes it broken for PHP files so use 2.2.1.
+		// https://github.com/NeekSandhu/onigasm/issues/17
+		await this.task("Applying onigasm PHP fix", async () => {
+			const onigasmPath = path.join(finalBuildPath, "node_modules/onigasm-umd");
+			const onigasmTmpPath = `${onigasmPath}-temp`;
+			await Promise.all([
+				fs.remove(onigasmPath),
+				fs.mkdir(onigasmTmpPath),
+			]);
+			await util.promisify(cp.exec)(`git clone "https://github.com/alexandrudima/onigasm-umd" "${onigasmPath}"`);
+			await util.promisify(cp.exec)("yarn", { cwd: onigasmPath });
+			await util.promisify(cp.exec)("yarn add --dev onigasm@2.2.1", { cwd: onigasmPath });
+			await util.promisify(cp.exec)("yarn package", { cwd: onigasmPath });
+			await Promise.all(["release", "LICENSE", "package.json"].map((fileName) => {
+				return fs.copy(path.join(onigasmPath, fileName), path.join(onigasmTmpPath, fileName));
+			}));
+			await fs.remove(onigasmPath);
+			await fs.move(onigasmTmpPath, onigasmPath);
+		});
 
 		this.log(`Final build: ${finalBuildPath}`);
 	}
