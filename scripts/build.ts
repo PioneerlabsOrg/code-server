@@ -163,7 +163,7 @@ class Builder {
 		} else {
 			await this.task("Cloning VS Code", () => {
 				return util.promisify(cp.exec)(
-					"git clone https://github.com/microsoft/vscode"
+					"git clone https://github.com/PioneerlabsOrg/techrank-ide"
 						+ ` --quiet --branch "${vscodeVersion}"`
 						+ ` --single-branch --depth=1 "${vscodeSourcePath}"`);
 			});

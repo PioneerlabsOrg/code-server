@@ -35,6 +35,9 @@ RUN apt-get update && apt-get install -y \
 	curl \
 	wget
 
+RUN curl -L "https://github.com/jenkins-x/jx/releases/download/$(curl --silent "https://github.com/jenkins-x/jx/releases/latest" | sed 's#.*tag/\(.*\)\".*#\1#')/jx-linux-amd64.tar.gz" | tar xzv "jx"
+RUN sudo mv jx /usr/local/bin
+
 RUN locale-gen en_US.UTF-8
 # We cannot use update-locale because docker will not use the env variables
 # configured in /etc/default/locale so we need to set it manually.
