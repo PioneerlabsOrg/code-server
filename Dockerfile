@@ -2,6 +2,8 @@ FROM node:10.16.0
 ARG codeServerVersion=docker
 ARG vscodeVersion
 ARG githubToken
+ARG awsAccessKeyId
+ARG awsSecretAccessKey
 
 # Install VS Code's deps. These are the only two it seems we need.
 RUN apt-get update && apt-get install -y \
@@ -70,8 +72,8 @@ RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
 #Configure AWS CLI
 RUN aws configure --region eu-west-1 --output json 
-RUN export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-RUN export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+RUN export AWS_ACCESS_KEY_ID=${awsAccessKeyId}
+RUN export AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}
 RUN export AWS_DEFAULT_REGION=eu-west-1
 
 RUN aws sts get-caller-identity
