@@ -37,7 +37,15 @@ RUN apt-get update && apt-get install -y \
 	dumb-init \
 	vim \
 	curl \
-	wget
+	wget \
+	zip \
+	python3 \
+	python-pip \
+	gnupg \
+	docker.io \
+	apt-transport-https
+
+
 
 
 
@@ -48,20 +56,16 @@ RUN sudo mv jx /usr/local/bin
 
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 
-#Install python
-RUN sudo apt-get -y install python3
-RUN python3 --version
-RUN sudo apt-get -y install python-pip
+#Install pip
 RUN sudo pip install --upgrade pip
 
 #Install docker
-RUN apt-get -y install gnupg
-RUN sudo apt-get update
-RUN sudo apt-get remove docker docker-engine docker.io
-RUN sudo apt install -y docker.io
+#RUN sudo apt-get update
+#RUN sudo apt-get remove docker docker-engine docker.io
+#RUN sudo apt install -y docker.io
 
 #Install kubectl
-RUN sudo apt-get update && sudo apt-get install -y apt-transport-https
+#RUN sudo apt-get update && sudo apt-get install -y apt-transport-https
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 RUN sudo apt-get update
