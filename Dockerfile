@@ -5,6 +5,7 @@ ARG githubToken
 ARG awsAccessKeyId
 ARG awsSecretAccessKey
 
+
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install VS Code's deps. These are the only two it seems we need.
@@ -18,7 +19,7 @@ RUN npm install -g yarn@1.13
 WORKDIR /src
 COPY . .
 
-RUN yarn \
+ RUN yarn \
 	&& MINIFY=true GITHUB_TOKEN="${githubToken}" yarn build "${vscodeVersion}" "${codeServerVersion}" \
 	&& yarn binary "${vscodeVersion}" "${codeServerVersion}" \
 	&& mv "/src/binaries/code-server${codeServerVersion}-vsc${vscodeVersion}-linux-x86_64" /src/binaries/code-server \
@@ -77,15 +78,15 @@ RUN unzip awscli-bundle.zip
 RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
 #Configure AWS CLI
-RUN aws configure --region eu-west-1 --output json 
-RUN aws configure set aws_access_key_id ${awsAccessKeyId}
-RUN aws configure set aws_secret_access_key ${awsSecretAccessKey}
-RUN export AWS_ACCESS_KEY_ID=${awsAccessKeyId}
-RUN export AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}
-RUN export AWS_DEFAULT_REGION=eu-west-1
-RUN export AWS_DEFAULT_OUTPUT=json
+RUN aws configure set default.region eu-west-1
+RUN aws configure set default.output json
+RUN aws configure set aws_access_key_id
+RUN aws configure set aws_secret_access_key
+
+
 
 RUN aws sts get-caller-identity
+
 
 #Install eksctl
 RUN curl --silent --location "https://github.com/weaveworks/eksctl/releases/download/latest_release/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
@@ -96,7 +97,7 @@ RUN eksctl version
 RUN aws eks --region eu-west-1 update-kubeconfig --name techrank-me-v2
 
 #Jx 
-RUN jx ns jx 
+#RUN jx ns jx 
 RUN jx status
 
 RUN locale-gen en_US.UTF-8
