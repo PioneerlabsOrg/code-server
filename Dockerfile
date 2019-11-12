@@ -77,7 +77,9 @@ RUN unzip awscli-bundle.zip
 RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
 #Configure AWS CLI
-#RUN aws configure --region eu-west-1 --output json 
+RUN aws configure --region eu-west-1 --output json 
+RUN aws configure set aws_access_key_id ${awsAccessKeyId}
+RUN aws configure set aws_secret_access_key ${awsSecretAccessKey}
 RUN export AWS_ACCESS_KEY_ID=${awsAccessKeyId}
 RUN export AWS_SECRET_ACCESS_KEY=${awsSecretAccessKey}
 RUN export AWS_DEFAULT_REGION=eu-west-1
