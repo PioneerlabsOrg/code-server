@@ -28,7 +28,7 @@ FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y \
 	openssl \
-	net-tools \F
+	net-tools \
 	git \
 	locales \
 	sudo \
@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y \
 RUN curl -L "https://github.com/jenkins-x/jx/releases/download/$(curl --silent "https://github.com/jenkins-x/jx/releases/latest" | sed 's#.*tag/\(.*\)\".*#\1#')/jx-linux-amd64.tar.gz" | tar xzv "jx"
 RUN sudo mv jx /usr/local/bin
 
-curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 
 #Install python
 RUN sudo apt-get install python3
