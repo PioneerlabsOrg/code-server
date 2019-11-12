@@ -106,11 +106,12 @@ WORKDIR /home/coder/project
 VOLUME [ "/home/coder/project" ]
 
 COPY --from=0 /src/binaries/code-server /usr/local/bin/code-server
-COPY ./aws.sh /
-RUN chmod +x /aws.sh
+COPY --from=0 /src/aws.sh /home/coder/aws.sh
+RUN sudo chmod +x /home/coder/aws.sh
 
 EXPOSE 8080
 
 
 #ENTRYPOINT ["dumb-init", "code-server", "--host", "0.0.0.0"]
-ENTRYPOINT ["./aws.sh"]
+ENTRYPOINT ["/home/coder/./aws.sh"]
+CMD ["someKey","someSecrect"]
