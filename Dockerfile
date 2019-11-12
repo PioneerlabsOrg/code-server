@@ -5,6 +5,8 @@ ARG githubToken
 ARG awsAccessKeyId
 ARG awsSecretAccessKey
 
+ENV DEBIAN_FRONTEND noninteractive
+
 # Install VS Code's deps. These are the only two it seems we need.
 RUN apt-get update && apt-get install -y \
 	libxkbfile-dev \
@@ -47,16 +49,16 @@ RUN sudo mv jx /usr/local/bin
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 
 #Install python
-RUN sudo apt-get install python3
+RUN sudo apt-get -y install python3
 RUN python3 --version
 RUN sudo apt-get -y install python-pip
 RUN sudo pip install --upgrade pip
 
 #Install docker
-RUN apt-get install gnupg
+RUN apt-get -y install gnupg
 RUN sudo apt-get update
 RUN sudo apt-get remove docker docker-engine docker.io
-RUN sudo apt install docker.io
+RUN sudo apt install -y docker.io
 
 #Install kubectl
 RUN sudo apt-get update && sudo apt-get install -y apt-transport-https
