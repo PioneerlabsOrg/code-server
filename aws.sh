@@ -11,6 +11,8 @@ aws eks --region eu-west-1 update-kubeconfig --name techrank-me-v2
 
 jx ns jx 
 
-ln -s /home/coder/project/techrank-ide-3rd-party-extensions .local/share/code-server/extensions
+rm -Rf /home/coder/.local/share/code-server/extensions
+
+ln -s /home/coder/project/techrank-ide-3rd-party-extensions /home/coder/.local/share/code-server/extensions
 
 code-server --host 0.0.0.0
