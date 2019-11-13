@@ -44,7 +44,10 @@ RUN apt-get update && apt-get install -y \
 	python-pip \
 	gnupg \
 	docker.io \
-	apt-transport-https
+	apt-transport-https \
+	default-jdk \
+	maven \
+
 
 
 
