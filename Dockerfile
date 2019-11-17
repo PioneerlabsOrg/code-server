@@ -111,6 +111,8 @@ VOLUME [ "/home/coder/project" ]
 COPY --from=0 /src/binaries/code-server /usr/local/bin/code-server
 COPY --from=0 /src/aws.sh /home/coder/aws.sh
 RUN sudo chmod +x /home/coder/aws.sh
+#RUN sudo rm -Rf /home/coder/.local/share/code-server/extensions
+#RUN ln -s /home/coder/project/techrank-ide-3rd-party-extensions /home/coder/.local/share/code-server/extensions
 
 EXPOSE 8080
 
