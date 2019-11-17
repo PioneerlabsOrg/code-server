@@ -46,7 +46,8 @@ RUN apt-get update && apt-get install -y \
 	docker.io \
 	apt-transport-https \
 	default-jdk \
-	maven
+	maven \
+	lsof
 
 
 
