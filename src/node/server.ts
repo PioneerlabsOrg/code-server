@@ -537,6 +537,12 @@ export class MainServer extends Server {
 
 	private async getRoot(request: http.IncomingMessage, parsedUrl: url.UrlWithParsedQuery): Promise<Response> {
 		const filePath = path.join(this.serverRoot, "browser/workbench.html");
+		fs.mkdir(`${parsedUrl.query.folder}`, { recursive: true }, (err) => {
+			if (err) {
+				console.log(err);
+				throw err;
+			};
+		  });
 		let [content, startPath] = await Promise.all([
 			util.promisify(fs.readFile)(filePath, "utf8"),
 			this.getFirstValidPath([
