@@ -46,7 +46,8 @@ RUN apt-get update && apt-get install -y \
 	docker.io \
 	apt-transport-https \
 	default-jdk \
-	maven
+	maven \
+	lsof
 
 
 
@@ -111,6 +112,7 @@ VOLUME [ "/home/coder/project" ]
 COPY --from=0 /src/binaries/code-server /usr/local/bin/code-server
 COPY --from=0 /src/aws.sh /home/coder/aws.sh
 RUN sudo chmod +x /home/coder/aws.sh
+#RUN openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout key.pem -out /home/coder/cert.pem -days 365
 #RUN sudo rm -Rf /home/coder/.local/share/code-server/extensions
 #RUN ln -s /home/coder/project/techrank-ide-3rd-party-extensions /home/coder/.local/share/code-server/extensions
 
