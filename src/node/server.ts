@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
+import * as cp from 'child_process';
 import * as http from "http";
 import * as https from "https";
 import * as net from "net";
@@ -65,6 +66,7 @@ import { UpdateService } from "vs/server/src/node/update";
 import { AuthType, getMediaMime, getUriTransformer, localRequire, tmpdir } from "vs/server/src/node/util";
 import { RemoteExtensionLogFileName } from "vs/workbench/services/remote/common/remoteAgentService";
 import { IWorkbenchConstructionOptions } from "vs/workbench/workbench.web.api";
+import { BASE_FOLDER, gitToken } from "./config"
 
 const tarFs = localRequire<typeof import("tar-fs")>("tar-fs/index");
 
@@ -537,17 +539,35 @@ export class MainServer extends Server {
 
 	private async getRoot(request: http.IncomingMessage, parsedUrl: url.UrlWithParsedQuery): Promise<Response> {
 		const filePath = path.join(this.serverRoot, "browser/workbench.html");
-		fs.mkdir(`${parsedUrl.query.folder}`, { recursive: true }, (err) => {
-			if (err) {
-				console.log(err);
-				throw err;
-			};
-		  });
+		const { problem, userId }= parsedUrl.query;
+		const gitRepoExist = () => {
+			let res: boolean = true;
+			try {
+				cp.execSync(`
+					git ls-remote https://${gitToken}@github.com/PioneerlabsOrg/${problem}
+				`);
+				res = true;
+			} catch(error) {
+				if(error) {res = false;}
+			}
+			return res;
+		};
+		if (gitRepoExist()) {
+			console.log('GIT REPO EXIST :: CREATING USER + REPO FOLDER');
+			fs.mkdir(`${BASE_FOLDER}${userId}/${problem}`, { recursive: true }, (err) => {
+				if (err) { throw err; }
+			});
+		} else {
+			console.log('GIT REPO DOES NOT EXIST :: CREATING ONLY USER FOLDER');
+			fs.mkdir(`${BASE_FOLDER}${userId}`, { recursive: true }, (err) => {
+				if (err) { throw err; }
+			});
+		}
 		let [content, startPath] = await Promise.all([
 			util.promisify(fs.readFile)(filePath, "utf8"),
 			this.getFirstValidPath([
 				{ path: parsedUrl.query.workspace, workspace: true },
-				{ path: parsedUrl.query.folder },
+				{ path: parsedUrl.query.problem && gitRepoExist() ? BASE_FOLDER + userId + '/' + problem : BASE_FOLDER + userId},
 				(await this.readSettings()).lastVisited,
 				{ path: this.options.folderUri }
 			]),
@@ -569,6 +589,8 @@ export class MainServer extends Server {
 		const remoteAuthority = request.headers.host as string;
 		const transformer = getUriTransformer(remoteAuthority);
 
+		// startPath && console.log('startPath ', startPath);
+
 		const environment = this.services.get(IEnvironmentService) as IEnvironmentService;
 		const options: Options = {
 			WORKBENCH_WEB_CONFIGURATION: {
@@ -583,6 +605,13 @@ export class MainServer extends Server {
 			},
 			NLS_CONFIGURATION: await getNlsConfiguration(environment.args.locale || await getLocaleFromConfig(environment.userDataPath), environment.userDataPath),
 		};
+
+		// console.log('options ', options.WORKBENCH_WEB_CONFIGURATION);
+		// console.log('allowed req paths', this.allowedRequestPaths);
+		// console.log('server root ', this.serverRoot);
+		// console.log('root path', this.rootPath);
+		// console.log('server ', this.server);
+
 
 		content = content.replace(/{{COMMIT}}/g, product.commit || "");
 		for (const key in options) {
