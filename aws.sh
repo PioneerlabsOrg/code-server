@@ -11,4 +11,6 @@ aws eks --region eu-west-1 update-kubeconfig --name techrank-me-v2
 
 jx ns jx 
 
-code-server --host 0.0.0.0
+#openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout key.pem -out /home/coder/cert.pem -days 365
+
+code-server --host 0.0.0.0 --port 8080
